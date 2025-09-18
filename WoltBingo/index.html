@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phrase Bingo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen">
+
+    <div id="app" class="relative w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <div id="auth-container" class="absolute top-4 right-4 text-right z-10">
+            <div id="user-info" class="hidden items-center gap-4">
+                <span id="user-display-name" class="text-sm text-gray-300"></span>
+                <button id="logout-btn" class="bg-red-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-red-700 transition">Logout</button>
+            </div>
+            <div id="login-register-buttons">
+                <button id="login-btn-nav" class="bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-blue-700 transition">Login</button>
+                <button id="register-btn-nav" class="bg-green-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-green-700 transition">Register</button>
+            </div>
+        </div>
+
+        <div id="create-game-view" class="flex flex-col lg:flex-row gap-8 pt-12">
+            <div class="flex-grow">
+                <div class="text-center lg:text-left">
+                    <h1 class="text-4xl sm:text-5xl font-bold text-blue-500 mb-4">Phrase Bingo</h1>
+                    <p class="text-lg text-gray-400 mb-8">Create a new game. Enter at least 5 rare phrases and at least 25 common phrases.</p>
+                </div>
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-grow bg-gray-800 p-6 rounded-lg shadow-md">
+                        <label for="phrases-input" class="block text-sm font-medium text-gray-300 mb-2">Common Phrases (at least 25)</label>
+                        <textarea id="phrases-input" class="w-full h-64 p-3 border border-gray-600 rounded-md bg-gray-700" placeholder="One per line..."></textarea>
+                        <p id="phrase-count" class="text-sm text-gray-400 mt-2 text-left">0 phrases</p>
+                    </div>
+                    <div class="w-full md:w-1/3 bg-gray-800 p-6 rounded-lg shadow-md">
+                        <label for="rare-phrases-input" class="block text-sm font-medium text-purple-400 mb-2">Ultra Rare Phrases (at least 5)</label>
+                        <textarea id="rare-phrases-input" class="w-full h-64 p-3 border border-gray-600 rounded-md bg-gray-700" placeholder="One per line..."></textarea>
+                        <p id="rare-phrase-count" class="text-sm text-gray-400 mt-2 text-left">0 phrases</p>
+                    </div>
+                </div>
+                <p id="error-message" class="text-red-500 mt-4 text-sm h-5 text-center"></p>
+                <button id="create-game-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 mt-4 disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>Create Game & Get Link</button>
+            </div>
+            <div class="w-full lg:w-80 flex-shrink-0">
+                 <h2 class="text-2xl font-bold text-center mb-4">🏆 All-Time Wins</h2>
+                 <div id="leaderboard" class="bg-gray-800 p-4 rounded-lg shadow-md h-96 overflow-y-auto"></div>
+                 
+                 <div id="active-games-container" class="hidden">
+                    <h2 class="text-2xl font-bold text-center mt-8 mb-4">🎲 Active Games</h2>
+                    <div id="active-games-list" class="bg-gray-800 p-4 rounded-lg shadow-md h-48 overflow-y-auto">
+                        <p class="text-gray-500 text-center py-4">No active games found.</p>
+                    </div>
+                 </div>
+
+                 <h2 class="text-2xl font-bold text-center mt-8 mb-4">📜 Recent Phrase Sets</h2>
+                 <div id="recent-games" class="bg-gray-800 p-4 rounded-lg shadow-md h-64 overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <div id="link-game-view" class="hidden text-center pt-12">
+             <h2 class="text-3xl font-bold mb-4">Your Game is Ready!</h2>
+            <p class="text-gray-400 mb-6">Share this link with your teammates to have them join the game.</p>
+            <div class="bg-gray-800 p-6 rounded-lg shadow-md flex items-center space-x-4">
+                <input id="game-link-input" type="text" class="flex-grow p-3 border border-gray-600 rounded-md bg-gray-700 text-gray-200" readonly>
+                <button id="copy-link-btn" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition">Copy</button>
+            </div>
+             <button id="go-to-my-card-btn" class="mt-6 bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition">Go to My Bingo Card</button>
+        </div>
+
+        <div id="board-game-view" class="hidden pt-12">
+            <div class="grid grid-cols-1 lg:grid-cols-[200px_1fr_256px] gap-8">
+                <div class="order-2 lg:order-1">
+                     <h2 class="text-2xl font-bold text-center mb-4 text-purple-400">Ultra Rare</h2>
+                     <div id="rare-phrases-container" class="space-y-3"></div>
+                </div>
+                <div class="order-1 lg:order-2">
+                    <h1 class="text-3xl sm:text-4xl font-bold text-blue-500 mb-2 text-center">Your Bingo Card</h1>
+                    <div class="max-w-xl mx-auto">
+                        <div id="bingo-card-container" class="bingo-card shadow-lg p-2 rounded-lg bg-gray-800"></div>
+                    </div>
+                    <div class="text-center mt-6">
+                         <button id="bingo-btn" class="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-4 px-10 rounded-full shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all transform hover:scale-110 text-2xl tracking-wider">BINGO!</button>
+                    </div>
+                     <p class="text-sm text-gray-400 mt-8 text-center">
+                        Playing as: <strong id="player-name-display" class="font-mono bg-gray-700 px-2 py-1 rounded"></strong>
+                        <span class="mx-2">|</span>
+                        Score: <strong id="player-score-display" class="font-mono bg-gray-700 px-2 py-1 rounded">0</strong>
+                     </p>
+                </div>
+                <div class="order-3 lg:order-3">
+                     <h2 class="text-2xl font-bold text-center mb-4">Live Progress</h2>
+                     <div id="live-players-container" class="bg-gray-800 p-4 rounded-lg shadow-md h-[450px] overflow-y-auto space-y-4"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Auth Modal -->
+        <div id="auth-modal" class="hidden modal-backdrop bg-black bg-opacity-70">
+            <div class="modal-content bg-gray-800 text-left w-full max-w-sm relative">
+                <h2 id="auth-modal-title" class="text-2xl font-bold text-gray-100 mb-4">Login</h2>
+                <div class="space-y-4">
+                    <input id="auth-display-name" type="text" class="w-full p-3 border border-gray-600 rounded-md bg-gray-700" placeholder="Display Name">
+                    <input id="auth-email" type="email" class="w-full p-3 border border-gray-600 rounded-md bg-gray-700" placeholder="Email">
+                    <input id="auth-password" type="password" class="w-full p-3 border border-gray-600 rounded-md bg-gray-700" placeholder="Password">
+                </div>
+                <p id="auth-error" class="text-red-500 text-sm mt-2 h-5"></p>
+                <button id="auth-submit-btn" class="mt-4 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Login</button>
+                <p class="text-xs text-gray-400 mt-4 text-center">
+                    <span id="auth-toggle-text">Don't have an account?</span>
+                    <button id="auth-toggle-btn" class="text-blue-400 hover:underline">Register</button>
+                </p>
+                 <button id="auth-close-btn" class="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="hidden fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+            <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+        <!-- Winner Modal -->
+        <div id="winner-modal" class="hidden modal-backdrop bg-black bg-opacity-70">
+            <div class="modal-content bg-gray-800 text-center">
+                <h2 class="text-4xl font-bold text-amber-500 mb-4">BINGO!</h2>
+                <p class="text-lg text-gray-300">A winner has been declared!</p>
+                <p class="mt-4 text-xl"><strong id="winner-name" class="text-blue-400"></strong> is the Bingo champion!</p>
+                <button id="close-modal-btn" class="mt-6 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Play Again</button>
+            </div>
+        </div>
+        <!-- Message Modal -->
+        <div id="message-modal" class="hidden modal-backdrop bg-black bg-opacity-70">
+            <div class="modal-content bg-gray-800 text-center">
+                <h2 id="message-modal-title" class="text-2xl font-bold text-gray-100 mb-4">Message</h2>
+                <p id="message-modal-text" class="text-lg text-gray-300">This is a message.</p>
+                <button id="message-modal-close-btn" class="mt-6 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js" type="module"></script>
+</body>
+</html>
+
