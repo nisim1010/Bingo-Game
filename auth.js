@@ -5,27 +5,27 @@ import { ui } from './ui.js';
 import { state } from './script.js';
 
 export async function handleAuthSubmit() {
-    const email = ui.authEmail.value;
-    const password = ui.authPassword.value;
-    const displayName = ui.authDisplayName.value;
-    ui.authError.textContent = '';
+    const email = document.getElementById('auth-email').value;
+    const password = document.getElementById('auth-password').value;
+    const displayName = document.getElementById('auth-display-name').value;
+    const authError = document.getElementById('auth-error');
+    authError.textContent = '';
 
     try {
         if (state.isRegisterMode) {
-            if (!displayName || !email || !password) { ui.authError.textContent = 'All fields are required.'; return; }
+            if (!displayName || !email || !password) { authError.textContent = 'All fields are required.'; return; }
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             await setDoc(doc(db, "users", userCredential.user.uid), { displayName, activeGames: [] });
         } else {
-            if (!email || !password) { ui.authError.textContent = 'All fields are required.'; return; }
+            if (!email || !password) { authError.textContent = 'All fields are required.'; return; }
             await signInWithEmailAndPassword(auth, email, password);
         }
         ui.authModal.classList.add('hidden');
     } catch (error) {
-        ui.authError.textContent = error.message;
+        authError.textContent = error.message;
     }
 }
 
 export function handleLogout() {
     signOut(auth);
 }
-
