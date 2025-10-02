@@ -19,8 +19,9 @@ export function initializeFirebase() {
         app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
-        console.log("Firebase initialized successfully");
     } catch (e) {
         console.error("Firebase init failed:", e);
+        alert("Could not connect to the game server. Please check your Firebase configuration.");
     }
 }
+
