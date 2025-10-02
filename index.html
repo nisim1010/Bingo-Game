@@ -7,85 +7,122 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen">
+<body class="bg-gray-900 text-gray-200">
 
-    <div id="app" class="relative w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div id="app" class="relative w-full mx-auto p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col">
         
-        <div id="auth-container" class="absolute top-4 right-4 text-right z-10">
-            <div id="user-info" class="hidden items-center gap-4">
-                <span id="user-display-name" class="text-sm text-gray-300"></span>
-                <button id="logout-btn" class="bg-red-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-red-700 transition">Logout</button>
+        <header class="w-full mb-6">
+            <div class="flex items-center justify-between">
+                <!-- Left side: Back Button (conditional) -->
+                <div class="flex-1">
+                    <button id="back-to-home-btn" class="hidden bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition">&larr; Home</button>
+                </div>
+                
+                <!-- Center: Title -->
+                <div class="flex-1 text-center">
+                    <h1 id="page-title" class="text-4xl font-bold text-blue-500">Bingo Game</h1>
+                </div>
+
+                <!-- Right side: Auth buttons -->
+                <div class="flex-1 flex justify-end">
+                    <div id="auth-container" class="text-right z-10">
+                        <div id="user-info" class="hidden items-center gap-4">
+                            <span id="user-display-name" class="text-sm text-gray-300"></span>
+                            <button id="game-invites-btn" class="hidden relative bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-blue-700 transition">
+                                Invites
+                                <span id="game-invites-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                            </button>
+                            <button id="friend-requests-btn" class="hidden relative bg-yellow-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-yellow-700 transition">
+                                Requests
+                                <span id="friend-requests-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                            </button>
+                            <button id="logout-btn" class="bg-red-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-red-700 transition">Logout</button>
+                        </div>
+                        <div id="login-register-buttons">
+                            <button id="login-btn-nav" class="bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-blue-700 transition">Login</button>
+                            <button id="register-btn-nav" class="bg-green-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-green-700 transition">Register</button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="login-register-buttons">
-                <button id="login-btn-nav" class="bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-blue-700 transition">Login</button>
-                <button id="register-btn-nav" class="bg-green-600 text-white text-xs font-bold py-1 px-3 rounded hover:bg-green-700 transition">Register</button>
-            </div>
-        </div>
+        </header>
         
         <!-- Home Page View -->
-        <div id="home-game-view" class="flex flex-col lg:flex-row gap-8 pt-12">
-            <div class="flex-grow text-center lg:text-left">
-                <h1 class="text-5xl font-bold text-blue-500 mb-12">Bingo Game</h1>
-                <div class="space-y-6 max-w-md mx-auto lg:mx-0">
-                    <button id="go-to-create-btn" class="w-full bg-green-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-green-700 transition-transform transform hover:scale-105 text-xl">
+        <div id="home-game-view" class="flex flex-col lg:flex-row gap-8 flex-grow">
+            <div class="flex-grow flex items-center justify-center">
+                <div class="space-y-10 max-w-md w-full">
+                    <button id="go-to-create-btn" class="w-full bg-green-600 text-white font-bold py-10 px-6 rounded-lg hover:bg-green-700 transition-transform transform hover:scale-105 text-3xl">
                         Create New Game
                     </button>
-                    <button id="go-to-join-btn" class="w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 text-xl">
+                    <button id="go-to-join-btn" class="w-full bg-blue-600 text-white font-bold py-10 px-6 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 text-3xl">
                         Join An Existing Game
                     </button>
                 </div>
             </div>
             <div class="w-full lg:w-96 flex-shrink-0">
-                <h2 class="text-3xl font-bold text-center mb-4">🏆 Leaderboard</h2>
-                <div id="leaderboard" class="bg-gray-800 p-4 rounded-lg shadow-md h-[32rem] overflow-y-auto"></div>
+                <div class="flex border-b border-gray-700 mb-4">
+                    <button id="leaderboard-tab-btn" class="flex-1 font-bold py-2 px-4 rounded-t-lg bg-gray-800 border-b-2 border-blue-500">🏆 Leaderboard</button>
+                    <button id="friends-tab-btn" class="flex-1 font-bold py-2 px-4 text-gray-400">👥 Friends</button>
+                </div>
+                <div id="leaderboard-panel" class="bg-gray-800 p-4 rounded-lg shadow-md h-[32rem] overflow-y-auto">
+                    <div id="leaderboard"></div>
+                </div>
+                <div id="friends-panel" class="hidden bg-gray-800 p-4 rounded-lg shadow-md h-[32rem] overflow-y-auto">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <input id="friend-search-input" type="text" class="flex-grow p-2 border border-gray-600 rounded-md bg-gray-700" placeholder="Find user by name...">
+                        <button id="friend-search-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Search</button>
+                    </div>
+                    <div id="friend-search-results" class="space-y-2 mb-4"></div>
+                    <hr class="border-gray-600 my-4">
+                    <div id="friends-list">
+                        <p class="text-gray-500 text-center py-4">Your friends will appear here.</p>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Create Game View -->
-        <div id="create-game-view" class="hidden pt-12">
-            <div class="mb-6">
-                 <button id="back-to-home-from-create-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition">&larr; Back to Home</button>
-            </div>
-            <div class="flex flex-col lg:flex-row gap-8">
-                <div class="flex-grow">
-                    <div class="text-center lg:text-left">
-                        <h1 class="text-4xl sm:text-5xl font-bold text-blue-500 mb-2">Create a Game</h1>
-                    </div>
-                    <div class="flex flex-col md:flex-row gap-4 mt-8">
-                        <div class="flex-grow bg-gray-800 p-6 rounded-lg shadow-md">
+        <div id="create-game-view" class="hidden flex flex-col flex-grow">
+            <div class="flex flex-col lg:flex-row gap-8 flex-grow">
+                <div class="flex-grow flex flex-col">
+                    <div class="flex flex-col md:flex-row gap-4 mt-8 flex-grow min-h-0">
+                        <div class="flex-grow bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
                             <label for="phrases-input" class="block text-sm font-medium text-gray-300 mb-2">Common Phrases (at least 25)</label>
-                            <textarea id="phrases-input" class="w-full h-64 p-3 border border-gray-600 rounded-md bg-gray-700" placeholder="One per line..."></textarea>
+                            <textarea id="phrases-input" class="w-full p-3 border border-gray-600 rounded-md bg-gray-700 flex-grow" placeholder="One per line..."></textarea>
                             <p id="phrase-count" class="text-sm text-gray-400 mt-2 text-left">0 phrases</p>
                         </div>
-                        <div class="w-full md:w-1/3 bg-gray-800 p-6 rounded-lg shadow-md">
+                        <div class="w-full md:w-1/3 bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
                             <label for="rare-phrases-input" class="block text-sm font-medium text-purple-400 mb-2">Ultra Rare Phrases (at least 5)</label>
-                            <textarea id="rare-phrases-input" class="w-full h-64 p-3 border border-gray-600 rounded-md bg-gray-700" placeholder="One per line..."></textarea>
+                            <textarea id="rare-phrases-input" class="w-full p-3 border border-gray-600 rounded-md bg-gray-700 flex-grow" placeholder="One per line..."></textarea>
                             <p id="rare-phrase-count" class="text-sm text-gray-400 mt-2 text-left">0 phrases</p>
                         </div>
                     </div>
                     <p id="error-message" class="text-red-500 mt-4 text-sm h-5 text-center"></p>
                     <button id="create-game-btn" class="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-transform transform hover:scale-105 mt-4 disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>Create Game & Get Link</button>
                 </div>
-                <div class="w-full lg:w-80 flex-shrink-0">
+                <div class="w-full lg:w-80 flex-shrink-0 flex flex-col">
                      <h2 class="text-2xl font-bold text-center mb-4">📜 Recent Phrase Sets</h2>
-                     <div id="recent-games" class="bg-gray-800 p-4 rounded-lg shadow-md h-96 overflow-y-auto"></div>
+                     <div id="recent-games" class="bg-gray-800 p-4 rounded-lg shadow-md overflow-y-auto flex-grow min-h-0"></div>
                 </div>
             </div>
         </div>
         
         <!-- Join Game View -->
-        <div id="join-game-view" class="hidden pt-12">
-             <div class="mb-6">
-                <button id="back-to-home-from-join-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition">&larr; Back to Home</button>
-            </div>
-            <div class="flex flex-col lg:flex-row gap-8">
-                <div id="active-games-container" class="w-full lg:w-1/3 hidden">
+        <div id="join-game-view" class="hidden w-full flex-grow flex flex-col">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-grow">
+                <div id="active-games-container" class="flex flex-col">
                     <h2 class="text-3xl font-bold mb-4">My Active Games</h2>
-                    <div id="active-games-list" class="bg-gray-800 p-4 rounded-lg shadow-md h-96 overflow-y-auto">
+                    <div id="active-games-list" class="bg-gray-800 p-4 rounded-lg shadow-md overflow-y-auto flex-grow min-h-0">
                         <p class="text-gray-500 text-center py-4">No active games found.</p>
                     </div>
                 </div>
-                <div class="flex-grow space-y-8">
+                <div id="game-invites-container" class="flex flex-col">
+                    <h2 class="text-3xl font-bold mb-4">Game Invites</h2>
+                    <div id="game-invites-list" class="bg-gray-800 p-4 rounded-lg shadow-md overflow-y-auto flex-grow min-h-0">
+                        <p class="text-gray-500 text-center py-4">No new game invites.</p>
+                    </div>
+                </div>
+                <div class="flex flex-col space-y-8">
                     <div>
                         <h2 class="text-3xl font-bold mb-4">Join a Game by ID</h2>
                         <div class="bg-gray-800 p-6 rounded-lg shadow-md flex items-center space-x-4">
@@ -93,17 +130,11 @@
                             <button id="join-by-id-btn" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700">Join</button>
                         </div>
                     </div>
-                    <div>
-                        <h2 class="text-3xl font-bold mb-4">Join a Friend</h2>
-                        <div id="friends-list" class="bg-gray-800 p-4 rounded-lg shadow-md h-96 overflow-y-auto">
-                            <p class="text-gray-500 text-center py-4">Friends list feature coming soon!</p>
-                            <!-- Friends will be listed here -->
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
 
+        <!--link-game-view-->
         <div id="link-game-view" class="hidden text-center pt-12">
              <h2 class="text-3xl font-bold mb-4">Your Game is Ready!</h2>
             <p class="text-gray-400 mb-6">Share this link with your teammates to have them join the game.</p>
@@ -114,18 +145,15 @@
              <button id="go-to-my-card-btn" class="mt-6 bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition">Go to My Bingo Card</button>
         </div>
 
-        <div id="board-game-view" class="hidden pt-12">
-            <div class="mb-6">
-                 <button id="back-to-home-from-board-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition">&larr; Back to Home</button>
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-[200px_1fr_256px] gap-8">
-                <div class="order-2 lg:order-1 flex flex-col h-[48rem] overflow-hidden">
+        <!--board-game-view-->
+        <div id="board-game-view" class="hidden flex-grow">
+            <div class="grid grid-cols-1 lg:grid-cols-[200px_1fr_256px] gap-8 h-full">
+                <div class="order-2 lg:order-1 flex flex-col overflow-hidden">
                      <h2 class="text-2xl font-bold text-center mb-4 text-purple-400">Ultra Rare</h2>
                      <div id="rare-phrases-container" class="space-y-3 flex-grow min-h-0 overflow-y-auto"></div>
                 </div>
                 <div class="order-1 lg:order-2">
-                    <h1 class="text-3xl sm:text-4xl font-bold text-blue-500 mb-2 text-center">Your Bingo Card</h1>
-                     <p class="text-sm text-gray-400 text-center mb-4">
+                    <p class="text-sm text-gray-400 text-center mb-4">
                         Game ID: <span id="game-id-display" class="font-mono bg-gray-700 px-2 py-1 rounded"></span> 
                         <button id="copy-game-id-btn" class="ml-2 text-xs bg-blue-600 text-white font-bold py-1 px-2 rounded hover:bg-blue-700 transition">Copy</button>
                     </p>
@@ -141,20 +169,28 @@
                         Score: <strong id="player-score-display" class="font-mono bg-gray-700 px-2 py-1 rounded">0</strong>
                      </p>
                 </div>
-                <div class="order-3 lg:order-3 flex flex-col h-[48rem] overflow-hidden">
+                <div class="order-3 lg:order-3 flex flex-col overflow-hidden">
                      <h2 class="text-2xl font-bold text-center mb-4">Live Progress</h2>
                      <div id="live-players-container" class="bg-gray-800 p-4 rounded-lg shadow-md overflow-y-auto space-y-4 flex-grow min-h-0"></div>
                 </div>
             </div>
         </div>
         
+        <!-- Modals -->
         <div id="auth-modal" class="hidden modal-backdrop bg-black bg-opacity-70"></div>
         <div id="loading-spinner" class="hidden fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-80 flex items-center justify-center z-50"></div>
         <div id="winner-modal" class="hidden modal-backdrop bg-black bg-opacity-70"></div>
         <div id="message-modal" class="hidden modal-backdrop bg-black bg-opacity-70"></div>
+        <div id="friend-requests-modal" class="hidden modal-backdrop bg-black bg-opacity-70"></div>
+        <div id="invite-modal" class="hidden modal-backdrop bg-black bg-opacity-70"></div>
+        <div id="game-invites-modal" class="hidden modal-backdrop bg-black bg-opacity-70"></div>
 
     </div>
     <script type="module" src="script.js"></script>
 </body>
 </html>
+
+
+
+
 
