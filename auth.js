@@ -2,9 +2,8 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } f
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { auth, db } from './firebase.js';
 import { ui } from './ui.js';
-import { state } from './script.js';
 
-export async function handleAuthSubmit() {
+export async function handleAuthSubmit(isRegisterMode) {
     const email = document.getElementById('auth-email').value;
     const password = document.getElementById('auth-password').value;
     const displayName = document.getElementById('auth-display-name').value;
@@ -12,7 +11,7 @@ export async function handleAuthSubmit() {
     authError.textContent = '';
 
     try {
-        if (state.isRegisterMode) {
+        if (isRegisterMode) {
             if (!displayName || !email || !password) { authError.textContent = 'All fields are required.'; return; }
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             await setDoc(doc(db, "users", userCredential.user.uid), { displayName, activeGames: [] });
@@ -29,3 +28,4 @@ export async function handleAuthSubmit() {
 export function handleLogout() {
     signOut(auth);
 }
+
