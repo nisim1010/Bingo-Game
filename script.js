@@ -30,13 +30,13 @@ function init() {
             state.playerId = user.uid;
             updateAuthUI(true, state.currentUser);
             
-            game.listenForUserUpdates(user.uid, handleRouting); // Pass handleRouting as a callback
-            ui.activeGamesContainer.classList.remove('hidden');
+            game.listenForUserUpdates(user.uid);
+            if(ui.activeGamesContainer) ui.activeGamesContainer.classList.remove('hidden');
         } else {
             state.currentUser = null;
             state.playerId = null;
             updateAuthUI(false, null);
-            ui.activeGamesContainer.classList.add('hidden');
+            if(ui.activeGamesContainer) ui.activeGamesContainer.classList.add('hidden');
         }
         handleRouting();
     });
@@ -54,25 +54,59 @@ function setupEventListeners() {
         state.isRegisterMode = true;
         openAuthModal(state.isRegisterMode);
     });
-    ui.logoutBtn.addEventListener('click', handleLogout);
-    ui.authCloseBtn.addEventListener('click', () => ui.authModal.classList.add('hidden'));
-    ui.authToggleBtn.addEventListener('click', () => {
-        state.isRegisterMode = !state.isRegisterMode;
-        setupAuthModal(state.isRegisterMode);
+    ui.goToCreateBtn.addEventListener('click', () => showView('create'));
+    ui.goToJoinBtn.addEventListener('click', () => showView('join'));
+    ui.backToHomeFromCreateBtn.addEventListener('click', () => showView('home'));
+    ui.backToHomeFromJoinBtn.addEventListener('click', () => showView('home'));
+    ui.backToHomeFromBoardBtn.addEventListener('click', () => {
+        window.location.href = window.location.origin + window.location.pathname;
     });
-    ui.authSubmitBtn.addEventListener('click', () => handleAuthSubmit());
+    ui.joinByIdBtn.addEventListener('click', () => {
+        const input = ui.joinByIdInput.value.trim();
+        try {
+            const url = new URL(input);
+            state.gameId = url.searchParams.get("game");
+        } catch (_) {
+            state.gameId = input; // Assume it's just an ID
+        }
+        handleRouting();
+    });
+
+    ui.logoutBtn.addEventListener('click', handleLogout);
+    
+    ui.authModal.addEventListener('click', (event) => {
+        const targetId = event.target.id;
+        if (targetId === 'auth-close-btn') {
+            ui.authModal.classList.add('hidden');
+        } else if (targetId === 'auth-toggle-btn') {
+            state.isRegisterMode = !state.isRegisterMode;
+            setupAuthModal(state.isRegisterMode);
+        } else if (targetId === 'auth-submit-btn') {
+            handleAuthSubmit();
+        }
+    });
+    
     ui.phrasesInput.addEventListener('input', game.updatePhraseCount);
     ui.rarePhrasesInput.addEventListener('input', game.updatePhraseCount);
     ui.createGameBtn.addEventListener('click', game.createNewGame);
     ui.copyLinkBtn.addEventListener('click', game.copyGameLink);
     ui.goToMyCardBtn.addEventListener('click', handleRouting);
     ui.bingoBtn.addEventListener('click', game.checkBingo);
-    ui.closeModalBtn.addEventListener('click', () => {
-        if (state.unsubscribe.game) state.unsubscribe.game();
-        if (state.unsubscribe.players) state.unsubscribe.players();
-        window.location.href = window.location.origin + window.location.pathname;
+    ui.copyGameIdBtn.addEventListener('click', game.copyGameId);
+
+    ui.winnerModal.addEventListener('click', (event) => {
+        if (event.target.id === 'close-modal-btn') {
+            if (state.unsubscribe.game) state.unsubscribe.game();
+            if (state.unsubscribe.players) state.unsubscribe.players();
+            window.location.href = window.location.origin + window.location.pathname;
+        }
     });
-    ui.messageModalCloseBtn.addEventListener('click', () => ui.messageModal.classList.add('hidden'));
+
+    ui.messageModal.addEventListener('click', (event) => {
+        if (event.target.id === 'message-modal-close-btn') {
+            ui.messageModal.classList.add('hidden');
+        }
+    });
 }
 
 function handleRouting() {
@@ -91,7 +125,7 @@ function handleRouting() {
             showMessage("Login Required", "You must be logged in to join this game.");
         }
     } else {
-        showView('create');
+        showView('home');
     }
 }
 
