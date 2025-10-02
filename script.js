@@ -1,7 +1,8 @@
 import { initializeFirebase, auth, db } from './firebase.js';
-import { assignUIElements, ui, updateAuthUI, openAuthModal, setupAuthModal, showView, showMessage } from './ui.js';
+import { assignUIElements, ui, updateAuthUI, openAuthModal, setupAuthModal, showView, showMessage, switchTab, renderInviteModal } from './ui.js';
 import { handleAuthSubmit, handleLogout } from './auth.js';
 import * as game from './game.js';
+import * as friends from './friends.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -30,13 +31,12 @@ function init() {
             state.playerId = user.uid;
             updateAuthUI(true, state.currentUser);
             
+            friends.listenForFriendsAndRequests(user.uid);
             game.listenForUserUpdates(user.uid);
-            if(ui.activeGamesContainer) ui.activeGamesContainer.classList.remove('hidden');
         } else {
             state.currentUser = null;
             state.playerId = null;
             updateAuthUI(false, null);
-            if(ui.activeGamesContainer) ui.activeGamesContainer.classList.add('hidden');
         }
         handleRouting();
     });
@@ -46,65 +46,89 @@ function init() {
 }
 
 function setupEventListeners() {
-    ui.loginBtnNav.addEventListener('click', () => {
-        state.isRegisterMode = false;
-        openAuthModal(state.isRegisterMode);
-    });
-    ui.registerBtnNav.addEventListener('click', () => {
-        state.isRegisterMode = true;
-        openAuthModal(state.isRegisterMode);
-    });
-    ui.goToCreateBtn.addEventListener('click', () => showView('create'));
-    ui.goToJoinBtn.addEventListener('click', () => showView('join'));
-    ui.backToHomeFromCreateBtn.addEventListener('click', () => showView('home'));
-    ui.backToHomeFromJoinBtn.addEventListener('click', () => showView('home'));
-    ui.backToHomeFromBoardBtn.addEventListener('click', () => {
-        window.location.href = window.location.origin + window.location.pathname;
-    });
-    ui.joinByIdBtn.addEventListener('click', () => {
-        const input = ui.joinByIdInput.value.trim();
-        try {
-            const url = new URL(input);
-            state.gameId = url.searchParams.get("game");
-        } catch (_) {
-            state.gameId = input; // Assume it's just an ID
-        }
-        handleRouting();
-    });
+    const appContainer = document.getElementById('app');
 
-    ui.logoutBtn.addEventListener('click', handleLogout);
-    
-    ui.authModal.addEventListener('click', (event) => {
-        const targetId = event.target.id;
-        if (targetId === 'auth-close-btn') {
-            ui.authModal.classList.add('hidden');
-        } else if (targetId === 'auth-toggle-btn') {
-            state.isRegisterMode = !state.isRegisterMode;
-            setupAuthModal(state.isRegisterMode);
-        } else if (targetId === 'auth-submit-btn') {
-            handleAuthSubmit();
-        }
-    });
-    
-    ui.phrasesInput.addEventListener('input', game.updatePhraseCount);
-    ui.rarePhrasesInput.addEventListener('input', game.updatePhraseCount);
-    ui.createGameBtn.addEventListener('click', game.createNewGame);
-    ui.copyLinkBtn.addEventListener('click', game.copyGameLink);
-    ui.goToMyCardBtn.addEventListener('click', handleRouting);
-    ui.bingoBtn.addEventListener('click', game.checkBingo);
-    ui.copyGameIdBtn.addEventListener('click', game.copyGameId);
+    appContainer.addEventListener('click', (event) => {
+        const target = event.target.closest('button');
+        if (!target) return;
 
-    ui.winnerModal.addEventListener('click', (event) => {
-        if (event.target.id === 'close-modal-btn') {
+        const handleBackToHome = () => {
             if (state.unsubscribe.game) state.unsubscribe.game();
             if (state.unsubscribe.players) state.unsubscribe.players();
-            window.location.href = window.location.origin + window.location.pathname;
+            state.gameId = null;
+            window.history.pushState({}, '', window.location.pathname);
+            showView('home');
+        };
+
+        const action = target.dataset.action || target.id;
+        switch (action) {
+            // Main Navigation
+            case 'go-to-create-btn': showView('create'); break;
+            case 'go-to-join-btn': showView('join'); break;
+            case 'back-to-home-btn': handleBackToHome(); break;
+            
+            case 'leaderboard-tab-btn': switchTab('leaderboard'); break;
+            case 'friends-tab-btn': switchTab('friends'); break;
+
+            // Auth Navigation & Modals
+            case 'login-btn-nav': openAuthModal(false); break;
+            case 'register-btn-nav': openAuthModal(true); break;
+            case 'logout-btn': handleLogout(); break;
+            case 'friend-requests-btn': friends.openFriendRequestsModal(); break;
+            case 'game-invites-btn': friends.openGameInvitesModal(); break;
+            
+            // Join/Create Flow
+            case 'create-game-btn': game.createNewGame(); break;
+            case 'copy-link-btn': game.copyGameLink(); break;
+            case 'go-to-my-card-btn': handleRouting(); break;
+            case 'join-by-id-btn':
+                const input = ui.joinByIdInput.value.trim();
+                try {
+                    const url = new URL(input);
+                    state.gameId = url.searchParams.get("game");
+                } catch (_) { state.gameId = input; }
+                handleRouting();
+                break;
+            
+            // In-Game Actions
+            case 'copy-game-id-btn': game.copyGameId(); break;
+            case 'bingo-btn': game.checkBingo(); break;
+
+            // Friend Actions
+            case 'friend-search-btn': 
+                const searchTerm = ui.friendSearchInput.value.trim();
+                if (searchTerm) friends.searchUsers(searchTerm);
+                break;
+            case 'add-friend': friends.sendFriendRequest(target.dataset.id); break;
+            case 'accept-friend': friends.acceptFriendRequest(target.dataset.id); break;
+            case 'decline-friend': friends.declineFriendRequest(target.dataset.id); break;
+            case 'invite-friend': 
+                renderInviteModal(target.dataset.id, target.dataset.name, state.currentUser.activeGames);
+                break;
+            case 'send-game-invite':
+                friends.sendGameInvite(target.dataset.friendId, target.dataset.gameId);
+                break;
+            case 'accept-game-invite': friends.acceptGameInvite(target.dataset.gameId); break;
+            case 'decline-game-invite': friends.declineGameInvite(target.dataset.gameId); break;
+            
+            // Generic Modal Actions
+            case 'close': target.closest('.modal-backdrop').classList.add('hidden'); break;
+            case 'toggle-auth-mode':
+                state.isRegisterMode = !state.isRegisterMode;
+                setupAuthModal(state.isRegisterMode);
+                break;
+            case 'submit-auth': handleAuthSubmit(state.isRegisterMode); break;
+            case 'play-again':
+                ui.winnerModal.classList.add('hidden');
+                handleBackToHome();
+                break;
         }
     });
 
-    ui.messageModal.addEventListener('click', (event) => {
-        if (event.target.id === 'message-modal-close-btn') {
-            ui.messageModal.classList.add('hidden');
+    appContainer.addEventListener('input', (event) => {
+        const targetId = event.target.id;
+        if (targetId === 'phrases-input' || targetId === 'rare-phrases-input') {
+            game.updatePhraseCount();
         }
     });
 }
