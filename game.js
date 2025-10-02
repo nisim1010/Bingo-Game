@@ -4,14 +4,17 @@ import { ui, showMessage, showView, renderBingoCard, renderPlayerProgress, rende
 import { state } from './script.js';
 
 export function getPhrasesFromInput() {
+    if (!ui.phrasesInput) return [];
     return ui.phrasesInput.value.split('\n').map(p => p.trim()).filter(p => p.length > 0);
 }
 
 export function getRarePhrasesFromInput() {
+    if (!ui.rarePhrasesInput) return [];
     return ui.rarePhrasesInput.value.split('\n').map(p => p.trim()).filter(p => p.length > 0);
 }
 
 export function updatePhraseCount() {
+    if (!ui.phrasesInput || !ui.rarePhrasesInput) return;
     const commonPhrases = getPhrasesFromInput();
     const rarePhrases = getRarePhrasesFromInput();
     ui.phraseCount.textContent = `${commonPhrases.length} phrases`;
@@ -99,12 +102,34 @@ export async function joinGame(pName, pId) {
         const gameDoc = await getDoc(gameRef);
 
         if (!gameDoc.exists()) {
-            showView('create'); 
+            state.gameId = null;
+            window.history.pushState({}, '', window.location.pathname);
+            showView('home'); 
             showMessage("Game Not Found", "The game link is broken or doesn't exist.");
             return;
         }
 
         const gameData = gameDoc.data();
+
+        // Check if the game is already over
+        if (gameData.winner) {
+            showMessage("Game Over", `This game has already been won by ${gameData.winner}.`);
+            
+            // Clean up the active game from the user's list
+            if (state.currentUser) {
+                const userDocRef = doc(db, "users", state.currentUser.uid);
+                await updateDoc(userDocRef, {
+                    activeGames: arrayRemove(state.gameId)
+                });
+            }
+            
+            // Go back to the home screen
+            state.gameId = null;
+            window.history.pushState({}, '', window.location.pathname);
+            showView('home');
+            return; // Stop the join process
+        }
+
         listenForGameUpdates(state.gameId);
         listenForPlayerUpdates(state.gameId);
         
@@ -139,7 +164,9 @@ export async function joinGame(pName, pId) {
         showView('board');
     } catch (error) {
         console.error("Error joining game:", error);
-        showView('create');
+        state.gameId = null;
+        window.history.pushState({}, '', window.location.pathname);
+        showView('home');
     }
 }
 
@@ -224,12 +251,12 @@ export async function checkBingo() {
         let highestScore = -1;
         let winner = { name: "No one", id: null };
 
-        allPlayersSnapshot.forEach(doc => {
-            const pData = doc.data();
+        allPlayersSnapshot.forEach(docSnap => {
+            const pData = docSnap.data();
             if ((pData.score || 0) > highestScore) {
                 highestScore = pData.score;
                 winner.name = pData.playerName;
-                winner.id = doc.id;
+                winner.id = docSnap.id;
             }
         });
 
@@ -274,10 +301,12 @@ export async function updateLeaderboard(winnerName, winnerId) {
 }
 
 export function listenForLeaderboardUpdates() {
+    if (!ui.leaderboard) return; 
     const q = query(collection(db, "leaderboard"), orderBy("wins", "desc"));
     state.unsubscribe.leaderboard = onSnapshot(q, (querySnapshot) => {
+        if (!ui.leaderboard) return;
         const players = [];
-        querySnapshot.forEach((doc) => players.push({ id: doc.id, ...doc.data() }));
+        querySnapshot.forEach((leaderboardDoc) => players.push({ id: leaderboardDoc.id, ...leaderboardDoc.data() }));
         
         ui.leaderboard.innerHTML = ''; 
         if (players.length === 0) {
@@ -302,15 +331,17 @@ export function listenForLeaderboardUpdates() {
 }
 
 export function listenForRecentGames() {
+    if (!ui.recentGames) return; 
     const q = query(collection(db, "bingoGames"), orderBy("createdAt", "desc"), limit(5));
     onSnapshot(q, (snapshot) => {
+        if (!ui.recentGames) return;
         ui.recentGames.innerHTML = '';
         if (snapshot.empty) {
             ui.recentGames.innerHTML = '<p class="text-gray-500 text-center py-4">No recent games found.</p>';
             return;
         }
-        snapshot.forEach((doc) => {
-            const gameData = doc.data();
+        snapshot.forEach((gameDoc) => {
+            const gameData = gameDoc.data();
             const entry = document.createElement('div');
             entry.className = 'bg-gray-700 p-3 rounded-md mb-2 flex justify-between items-center';
             const dateEl = document.createElement('span');
@@ -333,21 +364,21 @@ export function listenForRecentGames() {
         });
     }, (error) => {
         console.error("Error fetching recent games:", error);
-        ui.recentGames.innerHTML = '<p class="text-red-500 text-center py-4">Could not load games.</p>';
+        if (ui.recentGames) {
+            ui.recentGames.innerHTML = '<p class="text-red-500 text-center py-4">Could not load games.</p>';
+        }
     });
 }
 
 export function listenForGameUpdates(id) {
-    state.unsubscribe.game = onSnapshot(doc(db, "bingoGames", id), (doc) => {
-        if (!doc.exists()) return;
-        const gameData = doc.data();
+    state.unsubscribe.game = onSnapshot(doc(db, "bingoGames", id), (gameSnapshot) => {
+        if (!gameSnapshot.exists()) return;
+        const gameData = gameSnapshot.data();
         if (gameData.winner && ui.winnerModal.classList.contains('hidden')) {
-            ui.winnerName.textContent = gameData.winner;
-            ui.winnerModal.classList.remove('hidden');
-            confetti({ particleCount: 150, spread: 180, origin: { y: 0.6 } });
+            renderWinnerModal(gameData.winner);
         }
         if (gameData.rarePhrases) {
-            renderRarePhrases(gameData.rarePhrases, claimRarePhrase, unclaimRarePhrase);
+            renderRarePhrases(gameData.rarePhrases, state.playerId, claimRarePhrase, unclaimRarePhrase);
         }
     });
 }
@@ -355,11 +386,11 @@ export function listenForGameUpdates(id) {
 export function listenForPlayerUpdates(id) {
     state.unsubscribe.players = onSnapshot(query(collection(db, `bingoGames/${id}/players`)), (snapshot) => {
         const players = [];
-        snapshot.forEach((doc) => {
-            players.push({ id: doc.id, ...doc.data() });
+        snapshot.forEach((playerDoc) => {
+            players.push({ id: playerDoc.id, ...playerDoc.data() });
         });
 
-        renderPlayerProgress(players);
+        renderPlayerProgress(players, state.playerId);
 
         const currentPlayer = players.find(p => p.id === state.playerId);
         if (currentPlayer) {
@@ -422,9 +453,9 @@ export async function unclaimRarePhrase(index) {
 
 export function listenForUserUpdates(uid) {
     const userDocRef = doc(db, "users", uid);
-    state.unsubscribe.user = onSnapshot(userDocRef, (doc) => {
-        if (doc.exists()) {
-            renderActiveGamesList(doc.data().activeGames || []);
+    state.unsubscribe.user = onSnapshot(userDocRef, (userDoc) => {
+        if (userDoc.exists()) {
+            renderActiveGamesList(userDoc.data().activeGames || []);
         }
     });
 }
