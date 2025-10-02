@@ -83,6 +83,13 @@ export function copyGameLink() {
     setTimeout(() => { ui.copyLinkBtn.textContent = 'Copy'; }, 2000);
 }
 
+export function copyGameId() {
+    navigator.clipboard.writeText(state.gameId).then(() => {
+        ui.copyGameIdBtn.textContent = 'Copied!';
+        setTimeout(() => { ui.copyGameIdBtn.textContent = 'Copy'; }, 2000);
+    });
+}
+
 export async function joinGame(pName, pId) {
     state.playerId = pId;
     showView('loading');
@@ -102,6 +109,8 @@ export async function joinGame(pName, pId) {
         listenForPlayerUpdates(state.gameId);
         
         ui.playerNameDisplay.textContent = pName;
+        ui.gameIdDisplay.textContent = state.gameId;
+
         const playerRef = doc(db, `bingoGames/${state.gameId}/players`, state.playerId);
         const playerDoc = await getDoc(playerRef);
 
@@ -204,9 +213,29 @@ export async function checkBingo() {
     }
     
     if (hasBingo) {
+        const playerRefForBonus = doc(db, `bingoGames/${state.gameId}/players`, state.playerId);
+        await runTransaction(db, async (transaction) => {
+            const freshPlayerDoc = await transaction.get(playerRefForBonus);
+            const currentScore = freshPlayerDoc.data().score || 0;
+            transaction.update(playerRefForBonus, { score: currentScore + 1000 });
+        });
+        
+        const allPlayersSnapshot = await getDocs(collection(db, `bingoGames/${state.gameId}/players`));
+        let highestScore = -1;
+        let winner = { name: "No one", id: null };
+
+        allPlayersSnapshot.forEach(doc => {
+            const pData = doc.data();
+            if ((pData.score || 0) > highestScore) {
+                highestScore = pData.score;
+                winner.name = pData.playerName;
+                winner.id = doc.id;
+            }
+        });
+
         const gameRef = doc(db, "bingoGames", state.gameId);
-        await updateDoc(gameRef, { winner: playerData.playerName });
-        await updateLeaderboard(playerData.playerName, state.playerId);
+        await updateDoc(gameRef, { winner: winner.name });
+        await updateLeaderboard(winner.name, winner.id);
         await cleanupEndedGame(state.gameId);
     } else {
         showMessage("Not a Bingo!", "You don't have a valid 5-in-a-row.");
@@ -391,11 +420,11 @@ export async function unclaimRarePhrase(index) {
     }
 }
 
-export function listenForUserUpdates(uid, handleRoutingCallback) {
+export function listenForUserUpdates(uid) {
     const userDocRef = doc(db, "users", uid);
     state.unsubscribe.user = onSnapshot(userDocRef, (doc) => {
         if (doc.exists()) {
-            renderActiveGamesList(doc.data().activeGames || [], handleRoutingCallback);
+            renderActiveGamesList(doc.data().activeGames || []);
         }
     });
 }
